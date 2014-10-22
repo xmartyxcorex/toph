@@ -1,0 +1,15 @@
+
+#intro {
+  padding-top:60px;
+  margin-bottom:30px;
+}
+
+.text.left p {
+  font-size:13px;
+  line-height:24px;
+  letter-spacing:.1px;
+
+  @include media($medium) {
+
+  }
+}

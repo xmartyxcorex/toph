@@ -1,0 +1,94 @@
+// import bourbon
+@import 'vendor/bourbon/bourbon';
+@import 'grid-settings';
+@import 'vendor/neat/neat';
+
+
+
+/*
+* Build your awesome grid however your heart desires
+*
+* For guide on building a grid with Bourbon Neat checkout the docs
+* http://neat.bourbon.io/
+*/
+
+
+
+
+.wrapper {
+  @include outer-container;
+  padding:0 em(20);
+}
+
+section {
+	@include clearfix;
+  position: relative;
+	margin-bottom:60px;
+  padding:0 em(20);
+}
+
+.col-full {
+  @include span-columns(12);
+
+  @include media($medium) {
+    @include span-columns(8);
+  }
+}
+
+
+.col-wide {
+  @include span-columns(8);
+
+  @include media($medium) {
+    @include span-columns(8);
+  }
+}
+
+.col-narrow {
+	@include span-columns(4);
+
+  @include media($medium) {
+    @include span-columns(8);
+
+      ul li {
+          @include span-columns(4 of 8);
+          @include omega(2n);
+          display:list-item;
+    }
+  }
+}
+
+.right {
+  float:right;
+
+}
+
+.left {
+  float:left;
+}
+
+
+.image {
+
+  picture, img { width:100%; }
+}
+
+.text.full {
+  @extend .col-full;
+}
+
+.text.left {
+  @extend .col-narrow;
+
+  @include media($medium) {
+    @include span-columns(8);
+  }
+}
+
+.image.right {
+  @extend .col-wide;
+
+  @include media($medium) {
+    @include span-columns(8);
+  }
+}

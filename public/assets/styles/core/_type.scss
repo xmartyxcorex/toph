@@ -1,0 +1,77 @@
+@font-face {
+		font-family: 'baron_neueblack';
+		src: url('/assets/fonts/baron_neue_black-webfont.eot');
+		src: url('/assets/fonts/baron_neue_black-webfont.eot?#iefix') format('embedded-opentype'),
+				url('/assets/fonts/baron_neue_black-webfont.woff2') format('woff2'),
+				url('/assets/fonts/baron_neue_black-webfont.woff') format('woff'),
+				url('/assets/fonts/baron_neue_black-webfont.ttf') format('truetype'),
+				url('/assets/fonts/baron_neue_black-webfont.svg#baron_neueblack') format('svg');
+		font-weight: normal;
+		font-style: normal;
+
+}
+
+$basefont: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+$headingfont: "Roboto", "Helvetica Neue", Helvetica, Arial, sans-serif;
+$brandfont: "baron_neueblack", "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+
+
+h1, h2, h3, h4, h5, h6 { font-family: $headingfont; }
+
+#logo {
+		font-family:$brandfont;
+		font-size:36px;
+		line-height:60px;
+
+		a { color:white;}
+}
+
+#title {
+	background:$color_heading_background;
+	padding:80px 0 20px 0;
+}
+
+h1 {
+		font-weight:300;
+		font-size:60px;
+		line-height:80px;
+		color:white;
+		margin-bottom: 0;
+		margin-top: 0;
+
+}
+
+h2 {
+	margin:0 0 30px 0;
+	padding:0;
+	color:$color_heading;
+}
+
+p {
+	font-family:$basefont;
+	font-size:20px;
+	line-height:32px;
+	margin:0 0 30px 0;
+	color:$color_text;
+}
+
+a {
+	text-decoration:none;
+	outline:none;
+	color:$color_link;
+}
+
+
+ul {
+	margin-bottom:30px;
+	display:block;
+  margin-bottom:30px;
+}
+
+li {
+	font-weight:600;
+	display:list-item;
+	font-size:18px;
+	line-height:30px;
+}

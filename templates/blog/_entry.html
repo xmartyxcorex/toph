@@ -1,0 +1,87 @@
+{#
+ # This template is loaded whenever the URL matches a Blog section entry,
+ # because the Blog section's "Entry Template" setting is set to "blog/_entry".
+ #
+ # Craft will pre-populate an 'entry' variable with the matched Blog entry
+ # when loading this template.
+ #
+ # See: http://docs.buildwithcraft.com/reference/routing.html
+ #}
+{% extends "_layouts/_master" %}
+{% set title = entry.title %}
+
+
+
+
+{% block content %}
+  <div id="title">
+    <div class="wrapper">
+      <h1>{{ title }}</h1>
+    </div>
+  </div>
+	<!--<p>Written by {{ entry.author }} on {{ entry.postDate|date('M d, Y') }}</p>-->
+	<div class="wrapper">
+    <div id="intro" class="text full">
+      	{% for block in entry.intro %}
+
+            {% if block.type == "text" %}
+
+                {{ block.text }}
+
+            {% elseif block.type == "image" %}
+
+                {% set image = block.image.first() %}
+                {% if image %}
+                    <img src="{{ image.getUrl('') }}" width="{{ image.getWidth('') }}" height="{{ image.getHeight('') }}" alt="{{ image.title }}">
+                {% endif %}
+
+            {% endif %}
+
+        {% endfor %}
+  	</div>
+
+  	<div class="article">
+        {% for block in entry.article %}
+
+          {% if block.type == "heading" %}
+
+              <h2>{{ block.heading }}</h2>
+
+          {% elseif block.type == "text" %}
+
+              <div class="text {{ block.position }}">
+                {{ block.text|markdown }}
+              </div>
+
+          {% elseif block.type == "image" %}
+
+              {% set image = block.image.first() %}
+              {% if image %}
+              <div class="image {{ block.position }}">
+              <picture>
+              	<!--[if IE 9]><video style="display: none;"><![endif]-->
+              	<source srcset="{{ image.getUrl('large') }}" media="(min-width: 1000px)">
+              	<source srcset="{{ image.getUrl('large') }}" media="(min-width: 800px)">
+              	<!--[if IE 9]></video><![endif]-->
+              	<img srcset="{{ image.getUrl('medium') }}" alt="{{ image.title }}">
+              </picture>
+            </div>
+
+              <!-- <img sizes="(min-width: 40em) 80vw, 100vw"
+                  srcset="{{ image.getUrl('small') }} 375w,
+                          {{ image.getUrl('medium') }} 480w,
+                          {{ image.getUrl('large') }} 768w"
+                          alt="{{ image.title }}" src="{{ image.getUrl('large') }}"> -->
+
+
+              {% endif %}
+              <!-- {% if image %}
+                  <img src="{{ image.getUrl('medium') }}" width="{{ image.getWidth('medium') }}" height="{{ image.getHeight('medium') }}" alt="{{ image.title }}">
+              {% endif %} -->
+
+          {% endif %}
+
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}
