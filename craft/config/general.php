@@ -57,7 +57,7 @@ $customConfig = array(
     // 'siteRoutesSource'   => 'file',
 
     //PictureFill
-    'generateTransformsBeforePageLoad' => true
+    //'generateTransformsBeforePageLoad' => true
   ),
 
   // ------------------------------------------------------------

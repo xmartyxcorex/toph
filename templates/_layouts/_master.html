@@ -30,21 +30,26 @@
         <p>You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
       </div>
     <![endif]-->
+    <div id="container">
+      <header id="banner">
+          <div class="wrapper">
+              <div id="logo"><a href="/">TOPHER</a></div>
+          </div>
+      </header><!-- /#banner -->
 
-    <header id="banner">
-        <div class="wrapper">
-            <div id="logo"><a href="/">TOPHER</a></div>
-        </div>
-    </header><!-- /#banner -->
+      <div id="body">
+      {% block content %}
 
-    {% block content %}
+      {% endblock %}
+      </div>
 
-    {% endblock %}
-
-    <footer>
-        <div class="copyright"></div>
-    </footer>
-
+      <footer>
+          <div class="wrapper">
+            <p class="copyright">Copyright Topher Groenink 2014</p>
+          </div>
+      </footer>
+    </div>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
     {% if craft.config.devMode %}
     <script src="/dist/js/main.js"></script>
     {% else %}

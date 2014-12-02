@@ -10,8 +10,10 @@
 {% extends "_layouts/_master" %}
 {% set title = entry.title %}
 
-
-
+{% set criteria = craft.entries.section('blog').order('postDate desc') %}
+{% set prev = entry.getPrev(criteria) %}
+{% set next = entry.getNext(criteria) %}
+{% set date = entry.postDate|date('M d, Y') %}
 
 {% block content %}
   <div id="title">
@@ -20,19 +22,24 @@
     </div>
   </div>
 	<!--<p>Written by {{ entry.author }} on {{ entry.postDate|date('M d, Y') }}</p>-->
-	<div class="wrapper">
-    <div id="intro" class="text full">
+	<div class="wrapper entry">
+    <div id="intro" class="full">
+        <div class="entry-details left">
+          <span class="date">{{ date }}</span>
+        </div>
       	{% for block in entry.intro %}
 
             {% if block.type == "text" %}
-
+              <div class="text right">
                 {{ block.text }}
-
+              </div>
             {% elseif block.type == "image" %}
 
                 {% set image = block.image.first() %}
                 {% if image %}
-                    <img src="{{ image.getUrl('') }}" width="{{ image.getWidth('') }}" height="{{ image.getHeight('') }}" alt="{{ image.title }}">
+                  <div class="image">
+                    <img src="{{ image.getUrl('large') }}" alt="{{ image.title }}">
+                  </div>
                 {% endif %}
 
             {% endif %}
@@ -57,31 +64,67 @@
 
               {% set image = block.image.first() %}
               {% if image %}
-              <div class="image {{ block.position }}">
-              <picture>
-              	<!--[if IE 9]><video style="display: none;"><![endif]-->
-              	<source srcset="{{ image.getUrl('large') }}" media="(min-width: 1000px)">
-              	<source srcset="{{ image.getUrl('large') }}" media="(min-width: 800px)">
-              	<!--[if IE 9]></video><![endif]-->
-              	<img srcset="{{ image.getUrl('medium') }}" alt="{{ image.title }}">
-              </picture>
-            </div>
 
+                <div class="image {{ block.position }}">
+                  <picture>
+                  	<!--[if IE 9]><video style="display: none;"><![endif]-->
+                  	<source srcset="{{ image.getUrl('large') }}" media="(min-width: 1000px)">
+                  	<source srcset="{{ image.getUrl('medium') }}" media="(min-width: 400px)">
+                  	<source srcset="{{ image.getUrl('small') }}" media="(min-width: 300px)">
+                  	<!--[if IE 9]></video><![endif]-->
+                  	<img data-featherlight="{{ image.getUrl() }}" srcset="{{ image.getUrl('medium') }}" alt="{{ image.title }}" />
+                  </picture>
+                </div>
               <!-- <img sizes="(min-width: 40em) 80vw, 100vw"
                   srcset="{{ image.getUrl('small') }} 375w,
                           {{ image.getUrl('medium') }} 480w,
                           {{ image.getUrl('large') }} 768w"
                           alt="{{ image.title }}" src="{{ image.getUrl('large') }}"> -->
-
-
               {% endif %}
-              <!-- {% if image %}
-                  <img src="{{ image.getUrl('medium') }}" width="{{ image.getWidth('medium') }}" height="{{ image.getHeight('medium') }}" alt="{{ image.title }}">
-              {% endif %} -->
+
+            {% elseif block.type == "gallery" %}
+                {% if block.image %}
+                  <div class="gallery">
+                    {% for image in block.image %}
+                      <div class="image">
+                        <picture>
+                          <!--[if IE 9]><video style="display: none;"><![endif]-->
+                          <source srcset="{{ image.getUrl('large') }}" media="(min-width: 1000px)">
+                          <source srcset="{{ image.getUrl('medium') }}" media="(min-width: 400px)">
+                          <source srcset="{{ image.getUrl('small') }}" media="(min-width: 300px)">
+                          <!--[if IE 9]></video><![endif]-->
+                          <img data-featherlight="{{ image.getUrl() }}" srcset="{{ image.getUrl('medium') }}" alt="{{ image.title }}" />
+                        </picture>
+                      </div>
+
+                    {% endfor %}
+                  </div>
+                {% endif %}
+
 
           {% endif %}
 
       {% endfor %}
     </div>
+  </div>
+
+  <div id="entry-nav">
+
+    <div class="prev left">
+    {% if prev %}
+        <a href="{{ prev.url }}"><span class="icon">&#65513;</span>{{ prev.title }}</a>
+    {% else %}
+        <span class="disabled"></span>
+    {% endif %}
+    </div>
+
+    <div class="next right">
+    {% if next %}
+        <a href="{{ next.url }}">{{ next.title }}<span class="icon">&#65515;</span></a>
+    {% else %}
+        <span class="disabled"></span>
+    {% endif %}
+    </div>
+
   </div>
 {% endblock %}

@@ -15,6 +15,7 @@
 // via Normalize.css
 //
 @import 'vendor/normalize';
+@import 'vendor/featherlight';
 
 
 //
@@ -26,8 +27,8 @@
 @import url(http://fonts.googleapis.com/css?family=Roboto:500,400italic,700italic,300,700,400);
 @import 'core/mixins';
 @import 'core/colors';
-@import 'core/type';
 @import 'core/grid';
+@import 'core/type';
 @import 'core/base';
 
 

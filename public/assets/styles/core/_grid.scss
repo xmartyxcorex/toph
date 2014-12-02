@@ -12,23 +12,17 @@
 * http://neat.bourbon.io/
 */
 
-
-
+.right { float:right; }
+.left { float:left; }
 
 .wrapper {
   @include outer-container;
   padding:0 em(20);
 }
 
-section {
-	@include clearfix;
-  position: relative;
-	margin-bottom:60px;
-  padding:0 em(20);
-}
-
 .col-full {
   @include span-columns(12);
+  margin-bottom:30px;
 
   @include media($medium) {
     @include span-columns(8);
@@ -38,57 +32,40 @@ section {
 
 .col-wide {
   @include span-columns(8);
+  @include omega();
+  float:right;
+  //margin-bottom:30px;
 
   @include media($medium) {
     @include span-columns(8);
+  }
+
+  @include media($small) {
+    @include span-columns(4);
   }
 }
 
 .col-narrow {
-	@include span-columns(4);
-
-  @include media($medium) {
-    @include span-columns(8);
-
-      ul li {
-          @include span-columns(4 of 8);
-          @include omega(2n);
-          display:list-item;
-    }
-  }
-}
-
-.right {
-  float:right;
-
-}
-
-.left {
-  float:left;
-}
-
-
-.image {
-
-  picture, img { width:100%; }
-}
-
-.text.full {
-  @extend .col-full;
-}
-
-.text.left {
-  @extend .col-narrow;
+	@include span-columns(3);
+  /* @include shift(1); */
+  //margin-bottom:30px;
 
   @include media($medium) {
     @include span-columns(8);
   }
 }
 
-.image.right {
-  @extend .col-wide;
+.col-thirds {
+  @include span-columns(4);
+  margin-bottom:30px;
 
   @include media($medium) {
-    @include span-columns(8);
+    @include span-columns(4);
+    &:nth-child(2n) { @include omega(); }
+  }
+
+  @include media($small) {
+    @include span-columns(2);
+    &:nth-child(2n) { @include omega(); }
   }
 }

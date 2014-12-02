@@ -10,6 +10,9 @@
 
 html, body {
   width: 100%;
+  margin:0;
+  padding:0;
+  height:100%;
 }
 
 body {
@@ -19,6 +22,39 @@ body {
   position: relative;
 }
 
+
+#container {
+   min-height:100%;
+   position:relative;
+}
+
+header {
+  background:$color_header_background;
+  padding:10px 0;
+  width:100%;
+}
+
+#body {
+   padding-bottom:41px;   /* Height of the footer */
+}
+
+footer {
+  background:$color_footer_background;
+  margin-top:1px;
+  font-family:$basefont;
+  height:40px;
+  position:absolute;
+  bottom:0;
+  width:100%;
+
+  p.copyright {
+    font-size:14px;
+    color:white;
+    margin:0;
+    font-weight:400;
+    line-height:40px;
+  }
+}
 
 // Input Placeholders
 ::-webkit-input-placeholder {

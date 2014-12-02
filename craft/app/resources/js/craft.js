@@ -785,7 +785,7 @@ $.extend(Craft,
 
 		var secondsInWeek   = 604800,
 			secondsInDay    = 86400,
-			secondsInHour   = 1400,
+			secondsInHour   = 3600,
 			secondsInMinute = 60;
 
 		var weeks = Math.floor(seconds / secondsInWeek);
@@ -1035,7 +1035,15 @@ $.extend(Craft,
 		if (typeof localStorage != 'undefined')
 		{
 			key = 'Craft-'+Craft.siteUid+'.'+key;
-			localStorage[key] = JSON.stringify(value);
+
+			// localStorage might be filled all the way up.
+			// Especially likely if this is a private window in Safari 8+, where localStorage technically exists,
+			// but has a max size of 0 bytes.
+			try
+			{
+				localStorage[key] = JSON.stringify(value);
+			}
+			catch(e) {}
 		}
 	},
 
@@ -1293,6 +1301,9 @@ Garnish.$doc.ready(function()
  */
 Craft.BaseElementIndex = Garnish.Base.extend(
 {
+	// Properties
+	// =========================================================================
+
 	initialized: false,
 	elementType: null,
 
@@ -1329,16 +1340,19 @@ Craft.BaseElementIndex = Garnish.Base.extend(
 	$sidebar: null,
 	$sidebarButtonContainer: null,
 	showingSidebar: null,
-	$sources: null,
 	sourceKey: null,
 	sourceViewModes: null,
 	$source: null,
-	$sourceToggles: null,
 	$elements: null,
 	$table: null,
 	$elementContainer: null,
 
+	// Public methods
+	// =========================================================================
 
+	/**
+	 * Constructor
+	 */
 	init: function(elementType, $container, settings)
 	{
 		this.elementType = elementType;
@@ -1373,8 +1387,6 @@ Craft.BaseElementIndex = Garnish.Base.extend(
 		this.$loadingMoreSpinner = this.$container.find('.spinner.loadingmore')
 		this.$sidebar = this.$container.find('.sidebar:first');
 		this.$sidebarButtonContainer = this.$sidebar.children('.buttons');
-		this.$sources = this.$sidebar.find('nav a');
-		this.$sourceToggles = this.$sidebar.find('.toggle');
 		this.$elements = this.$container.find('.elements:first');
 
 		if (!this.$sidebarButtonContainer.length)
@@ -1387,11 +1399,29 @@ Craft.BaseElementIndex = Garnish.Base.extend(
 		this.$viewModeBtnTd = this.$toolbar.find('.viewbtns:first');
 		this.$viewModeBtnContainer = $('<div class="btngroup"/>').appendTo(this.$viewModeBtnTd);
 
+		// Initialize the sources
+		// ---------------------------------------------------------------------
+
+		var $sources = this._getSourcesInList(this.$sidebar.children('nav').children('ul'));
+
 		// No source, no party.
-		if (this.$sources.length == 0)
+		if ($sources.length == 0)
 		{
 			return;
 		}
+
+		// The source selector
+		this.sourceSelect = new Garnish.Select(this.$sidebar.find('nav'), {
+			multi:             false,
+			allowEmpty:        false,
+			vertical:          true,
+			onSelectionChange: $.proxy(this, 'onSourceSelectionChange')
+		});
+
+		this._initSources($sources);
+
+		// Initialize the locale menu button
+		// ---------------------------------------------------------------------
 
 		// Is there a locale menu?
 		if (this.$localeMenuBtn.length)
@@ -1470,26 +1500,10 @@ Craft.BaseElementIndex = Garnish.Base.extend(
 		}
 
 		this.selectSource($source);
+		this.sourceSelect.selectItem($source);
 
 		// Load up the elements!
 		this.initialized = true;
-		this.updateElements();
-
-		// Add some listeners
-		this.addListener(this.$sourceToggles, 'click', function(ev)
-		{
-			$(ev.currentTarget).parent().toggleClass('expanded');
-			this.$sidebar.trigger('resize');
-			ev.stopPropagation();
-		});
-
-		// The source selector
-		this.sourceSelect = new Garnish.Select(this.$sidebar.find('nav'), this.$sources, {
-			selectedClass:     'sel',
-			multi:             false,
-			vertical:          true,
-			onSelectionChange: $.proxy(this, 'onSourceSelectionChange')
-		});
 
 		// Status changes
 		if (this.$statusMenuBtn.length)
@@ -1543,6 +1557,48 @@ Craft.BaseElementIndex = Garnish.Base.extend(
 		}
 	},
 
+	get $sources()
+	{
+		if (!this.sourceSelect)
+		{
+			return undefined;
+		}
+
+		return this.sourceSelect.$items;
+	},
+
+	initSource: function($source)
+	{
+		this.sourceSelect.addItems($source);
+		this.initSourceToggle($source);
+	},
+
+	initSourceToggle: function($source)
+	{
+		var $toggle = this._getSourceToggle($source);
+
+		if ($toggle.length)
+		{
+			this.addListener($toggle, 'click', '_onToggleClick');
+		}
+	},
+
+	deinitSource: function($source)
+	{
+		this.sourceSelect.removeItems($source);
+		this.deinitSourceToggle($source);
+	},
+
+	deinitSourceToggle: function($source)
+	{
+		var $toggle = this._getSourceToggle($source);
+
+		if ($toggle.length)
+		{
+			this.removeListener($toggle, 'click');
+		}
+	},
+
 	getDefaultSourceKey: function()
 	{
 		return this.instanceState.selectedSource;
@@ -1550,13 +1606,7 @@ Craft.BaseElementIndex = Garnish.Base.extend(
 
 	onSourceSelectionChange: function()
 	{
-		var sourceElement = this.$sources.filter('.sel');
-		if (sourceElement.length == 0)
-		{
-			sourceElement = this.$sources.filter(':first');
-		}
-
-		this.selectSource(sourceElement);
+		this.selectSource(this.sourceSelect.$selectedItems);
 		this.updateElements();
 	},
 
@@ -1835,11 +1885,11 @@ Craft.BaseElementIndex = Garnish.Base.extend(
 
 	getSourceByKey: function(key)
 	{
-		for (var i = 0; i < this.$sources.length; i++)
+		if (this.$sources)
 		{
-			var $source = $(this.$sources[i]);
+			var $source = this.$sources.filter('[data-key="'+key+'"]:first');
 
-			if ($source.data('key') == key)
+			if ($source.length)
 			{
 				return $source;
 			}
@@ -1848,18 +1898,18 @@ Craft.BaseElementIndex = Garnish.Base.extend(
 
 	selectSource: function($source)
 	{
-		if (this.$source == $source)
+		if (this.$source && this.$source[0] && this.$source[0] == $source[0])
 		{
 			return;
 		}
 
-		if (this.$source)
+		if ($source[0] != this.sourceSelect.$selectedItems[0])
 		{
-			this.$source.removeClass('sel');
+			this.sourceSelect.selectItem($source);
 		}
 
+		this.$source = $source;
 		this.sourceKey = $source.data('key');
-		this.$source = $source.addClass('sel');
 		this.setInstanceState('selectedSource', this.sourceKey);
 
 		if (this.$search)
@@ -2137,8 +2187,85 @@ Craft.BaseElementIndex = Garnish.Base.extend(
 		this.$mainSpinner.addClass('hidden');
 		this.isIndexBusy = false;
 		this.$elements.fadeTo('fast', 1);
+	},
+
+	// Private methods
+	// =========================================================================
+
+	_getSourcesInList: function($list)
+	{
+		return $list.children('li').children('a');
+	},
+
+	_getChildSources: function($source)
+	{
+		var $list = $source.siblings('ul');
+		return this._getSourcesInList($list);
+	},
+
+	_getSourceToggle: function($source)
+	{
+		return $source.siblings('.toggle');
+	},
+
+	_initSources: function($sources)
+	{
+		for (var i = 0; i < $sources.length; i++)
+		{
+			this.initSource($($sources[i]));
+		}
+	},
+
+	_deinitSources: function($sources)
+	{
+		for (var i = 0; i < $sources.length; i++)
+		{
+			this.deinitSource($($sources[i]));
+		}
+	},
+
+	_onToggleClick: function(ev)
+	{
+		this._toggleSource($(ev.currentTarget).prev('a'));
+		ev.stopPropagation();
+	},
+
+	_toggleSource: function($source)
+	{
+		if ($source.parent('li').hasClass('expanded'))
+		{
+			this._collapseSource($source);
+		}
+		else
+		{
+			this._expandSource($source);
+		}
+	},
+
+	_expandSource: function($source)
+	{
+		$source.parent('li').addClass('expanded');
+
+		this.$sidebar.trigger('resize');
+
+		var $childSources = this._getChildSources($source);
+		this._initSources($childSources);
+	},
+
+	_collapseSource: function($source)
+	{
+		$source.parent('li').removeClass('expanded');
+
+		this.$sidebar.trigger('resize');
+
+		var $childSources = this._getChildSources($source);
+		this._deinitSources($childSources);
 	}
 },
+
+// Static Properties
+// =============================================================================
+
 {
 	defaults: {
 		context: 'index',
@@ -2214,8 +2341,17 @@ Craft.BaseElementSelectInput = Garnish.Base.extend(
 		{
 			this.elementSort = new Garnish.DragSort({
 				container: this.$elementsContainer,
-				filter: (this.selectable ? $.proxy(function() {
-					return this.elementSelect.getSelectedItems();
+				filter: (this.selectable ? $.proxy(function()
+				{
+					// Only return all the selected items if the target item is selected
+					if (this.elementSort.$targetItem.hasClass('sel'))
+					{
+						return this.elementSelect.getSelectedItems();
+					}
+					else
+					{
+						return this.elementSort.$targetItem;
+					}
 				}, this) : null),
 				ignoreHandleSelector: '.delete',
 				onSortChange: (this.selectable ? $.proxy(function() {
@@ -3020,23 +3156,52 @@ Craft.AssetIndex = Craft.BaseElementIndex.extend(
 		{
 			this.initIndexMode();
 		}
+	},
 
-		for (var i = 0; i < this.$sources.length; i++)
+	initSource: function($source)
+	{
+		this.base($source);
+
+		this._createFolderContextMenu($source);
+
+		if (this.settings.context == 'index')
 		{
-			var $source = $(this.$sources[i]);
-			this._createFolderContextMenu($source);
-
-			if (this.settings.context == 'index')
+			if (this._folderDrag && this._getSourceLevel($source) > 1)
 			{
-				if (this._folderDrag)
-				{
-					if (this._getSourceLevel($source) > 1)
-					{
-						this._folderDrag.addItems($source.parent());
-					}
-				}
+				this._folderDrag.addItems($source.parent());
 			}
-		};
+
+			if (this._fileDrag)
+			{
+				this._fileDrag.updateDropTargets();
+			}
+		}
+	},
+
+	deinitSource: function($source)
+	{
+		this.base($source);
+
+		// Does this source have a context menu?
+		var contextMenu = $source.data('contextmenu');
+
+		if (contextMenu)
+		{
+			contextMenu.destroy();
+		}
+
+		if (this.settings.context == 'index')
+		{
+			if (this._folderDrag && this._getSourceLevel($source) > 1)
+			{
+				this._folderDrag.removeItems($source.parent());
+			}
+
+			if (this._fileDrag)
+			{
+				this._fileDrag.updateDropTargets();
+			}
+		}
 	},
 
 	_getSourceLevel: function($source)
@@ -3092,9 +3257,8 @@ Craft.AssetIndex = Craft.BaseElementIndex.extend(
 			onDragStop: $.proxy(this, '_onFileDragStop')
 		});
 
-		// ---------------------------------------
 		// Folder dragging
-		// ---------------------------------------
+		// ---------------------------------------------------------------------
 
 		this._folderDrag = new Garnish.DragDrop(
 		{
@@ -3103,7 +3267,7 @@ Craft.AssetIndex = Craft.BaseElementIndex.extend(
 
 			filter: $.proxy(function()
 			{
-				// return each of the selected <a>'s parent <li>s, except for top level drag attampts.
+				// Return each of the selected <a>'s parent <li>s, except for top level drag attempts.
 				var $selected = this.sourceSelect.getSelectedItems(),
 					draggees = [];
 
@@ -3146,7 +3310,7 @@ Craft.AssetIndex = Craft.BaseElementIndex.extend(
 
 				// Tag the dragged folder and it's subfolders
 				var draggedSourceIds = [];
-				this._folderDrag.$draggee.find('a[data-key]').each(function ()
+				this._folderDrag.$draggee.find('a[data-key]').each(function()
 				{
 					draggedSourceIds.push($(this).data('key'));
 				});
@@ -3180,7 +3344,7 @@ Craft.AssetIndex = Craft.BaseElementIndex.extend(
 		if (this._fileDrag.$activeDropTarget)
 		{
 			// keep it selected
-			this._fileDrag.$activeDropTarget.addClass('sel');
+			this.sourceSelect.selectItem(this._fileDrag.$activeDropTarget);
 
 			var targetFolderId = this._getFolderIdFromSourceKey(this._fileDrag.$activeDropTarget.data('key')),
 				originalFileIds = [],
@@ -3191,6 +3355,11 @@ Craft.AssetIndex = Craft.BaseElementIndex.extend(
 			{
 				var originalFileId = Craft.getElementInfo(this._fileDrag.$draggee[i]).id,
 					fileName = Craft.getElementInfo(this._fileDrag.$draggee[i]).url.split('/').pop();
+
+				if (fileName.indexOf('?') !== -1)
+				{
+					fileName = fileName.split('?').shift();
+				}
 
 				originalFileIds.push(originalFileId);
 				newFileNames.push(fileName);
@@ -3310,7 +3479,7 @@ Craft.AssetIndex = Craft.BaseElementIndex.extend(
 		}
 
 		// re-select the previously selected folders
-		this.$previouslySelectedFolder.addClass('sel');
+		this.sourceSelect.selectItem(this.$previouslySelectedFolder);
 
 		this._fileDrag.returnHelpersToDraggees();
 	},
@@ -3586,7 +3755,7 @@ Craft.AssetIndex = Craft.BaseElementIndex.extend(
 
 			var newParent = this._getSourceByFolderId(targetFolderId);
 			this._prepareParentForChildren(newParent);
-			this._addSubfolder(newParent, topFolderLi);
+			this._appendSubfolder(newParent, topFolderLi);
 
 			topFolder.after(siblings);
 
@@ -3694,6 +3863,11 @@ Craft.AssetIndex = Craft.BaseElementIndex.extend(
 		};
 
 		this.selectSource($targetSource);
+		
+		this.$source = $targetSource;
+		this.sourceKey = $targetSource.data('key');
+		this.setInstanceState('selectedSource', this.sourceKey);
+
 		this.updateElements();
 	},
 
@@ -4293,7 +4467,7 @@ Craft.AssetIndex = Craft.BaseElementIndex.extend(
 		// collapse any temp-expanded drop targets that aren't parents of this one
 		this._collapseExtraExpandedFolders(this._getFolderIdFromSourceKey(this.dropTargetFolder.data('key')));
 
-		this.dropTargetFolder.parent().find('> .toggle').click();
+		this.dropTargetFolder.siblings('.toggle').click();
 
 		// keep a record of that
 		this._tempExpandedFolders.push(this.dropTargetFolder);
@@ -4301,11 +4475,9 @@ Craft.AssetIndex = Craft.BaseElementIndex.extend(
 
 	_collapseFolder: function($source)
 	{
-		var li = $source.parent();
-
-		if (li.hasClass('expanded'))
+		if ($source.parent().hasClass('expanded'))
 		{
-			li.find('> .toggle').click();
+			$source.siblings('.toggle').click();
 		}
 	},
 
@@ -4355,18 +4527,9 @@ Craft.AssetIndex = Craft.BaseElementIndex.extend(
 						'</li>'
 					);
 
-					var $a = $subFolder.find('a');
-					this._addSubfolder($parentFolder, $subFolder);
-					this._createFolderContextMenu($a);
-					this.sourceSelect.addItems($a);
-
-					// For Assets Modals the folder drag manager won't be available
-					if (this._folderDrag)
-					{
-						this._folderDrag.addItems($a.parent());
-					}
-
-					this.$sources = this.$sources.add($a);
+					var $a = $subFolder.children('a:first');
+					this._appendSubfolder($parentFolder, $subFolder);
+					this.initSource($a);
 				}
 
 				if (textStatus == 'success' && data.error)
@@ -4395,12 +4558,13 @@ Craft.AssetIndex = Craft.BaseElementIndex.extend(
 				{
 					var $parentFolder = this._getParentSource($targetFolder);
 
-					// remove folder and any trace from it's parent, if needed.
-					this.$sources = this.$sources.not($targetFolder);
-					this.sourceSelect.removeItems($targetFolder);
+					// Remove folder and any trace from its parent, if needed
+					this.deinitSource($targetFolder);
 
 					$targetFolder.parent().remove();
 					this._cleanUpTree($parentFolder);
+
+					this.$sidebar.trigger('resize');
 				}
 
 				if (textStatus == 'success' && data.error)
@@ -4457,34 +4621,33 @@ Craft.AssetIndex = Craft.BaseElementIndex.extend(
 		if (!this._hasSubfolders($parentFolder))
 		{
 			$parentFolder.parent().addClass('expanded').append('<div class="toggle"></div><ul></ul>');
-
-			this.addListener($parentFolder.siblings('.toggle'), 'click', function(ev)
-			{
-				$(ev.currentTarget).parent().toggleClass('expanded');
-			});
+			this.initSourceToggle($parentFolder);
 		}
 	},
 
 	/**
-	 * Add a subfolder to the parent folder at the correct spot.
+	 * Appends a subfolder to the parent folder at the correct spot.
 	 *
 	 * @param $parentFolder
 	 * @param $subFolder
 	 * @private
 	 */
-	_addSubfolder: function($parentFolder, $subFolder)
+	_appendSubfolder: function($parentFolder, $subFolder)
 	{
-		var $existingChildren = $parentFolder.siblings('ul').find('>li');
-		var folderInserted = false;
+		var $subfolderList = $parentFolder.siblings('ul'),
+			$existingChildren = $subfolderList.children('li'),
+			subfolderLabel = $.trim($subFolder.children('a:first').text()),
+			folderInserted = false;
 
 		for (var i = 0; i < $existingChildren.length; i++)
 		{
 			var $existingChild = $($existingChildren[i]);
 
-			if (!folderInserted && $.trim($existingChild.text()) > $.trim($subFolder.text()))
+			if ($.trim($existingChild.children('a:first').text()) > subfolderLabel)
 			{
 				$existingChild.before($subFolder);
 				folderInserted = true;
+				break;
 			}
 		};
 
@@ -4492,12 +4655,15 @@ Craft.AssetIndex = Craft.BaseElementIndex.extend(
 		{
 			$parentFolder.siblings('ul').append($subFolder);
 		}
+
+		this.$sidebar.trigger('resize');
 	},
 
 	_cleanUpTree: function($parentFolder)
 	{
-		if ($parentFolder !== null && $parentFolder.siblings('ul').find('li').length == 0)
+		if ($parentFolder !== null && $parentFolder.siblings('ul').children('li').length == 0)
 		{
+			this.deinitSourceToggle($parentFolder);
 			$parentFolder.siblings('ul').remove();
 			$parentFolder.siblings('.toggle').remove();
 			$parentFolder.parent().removeClass('expanded');
@@ -4576,6 +4742,13 @@ Craft.AssetSelectInput = Craft.BaseElementSelectInput.extend(
 				elementId: this.sourceElementId
 			}
 		};
+
+		// If CSRF protection isn't enabled, these won't be defined.
+		if (typeof Craft.csrfTokenName !== 'undefined' && typeof Craft.csrfTokenValue !== 'undefined')
+		{
+			// Add the CSRF token
+			options.formData[Craft.csrfTokenName] = Craft.csrfTokenValue;
+		}
 
 		if (typeof this.criteria.kind != "undefined")
 		{
@@ -4662,10 +4835,16 @@ Craft.AssetSelectInput = Craft.BaseElementSelectInput.extend(
 	 */
 	_onUploadComplete: function(event, data)
 	{
-		var html = $(data.result.html);
-		$('head').append(data.result.css);
-
-		this.selectUploadedFile(Craft.getElementInfo(html));
+		if (data.result.error)
+		{
+			alert(data.result.error);
+		}
+		else
+		{
+			var html = $(data.result.html);
+			$('head').append(data.result.css);
+			this.selectUploadedFile(Craft.getElementInfo(html));
+		}
 
 		// Last file
 		if (this.uploader.isLastUpload())
@@ -6511,7 +6690,7 @@ Craft.FieldLayoutDesigner = Garnish.Base.extend(
 		if (newName && newName != oldName)
 		{
 			$labelSpan.text(newName);
-			$tab.find('.id-input').attr('name', 'fieldLayout['+Craft.encodeUriComponent(newName)+'][]');
+			$tab.find('.id-input').attr('name', this.getFieldInputName(newName));
 		}
 	},
 
@@ -6551,7 +6730,7 @@ Craft.FieldLayoutDesigner = Garnish.Base.extend(
 		else
 		{
 			$field.addClass('fld-required');
-			$('<input class="required-input" type="hidden" name="requiredFields[]" value="'+$field.data('id')+'">').appendTo($field);
+			$('<input class="required-input" type="hidden" name="'+this.settings.requiredFieldInputName+'" value="'+$field.data('id')+'">').appendTo($field);
 
 			setTimeout(function() {
 				$option.text(Craft.t('Make not required'));
@@ -6613,6 +6792,11 @@ Craft.FieldLayoutDesigner = Garnish.Base.extend(
 		this.tabDrag.addItems($tab);
 
 		this.initTab($tab);
+	},
+
+	getFieldInputName: function(tabName)
+	{
+		return this.settings.fieldInputName.replace(/__TAB_NAME__/g, Craft.encodeUriComponent(tabName));
 	}
 },
 {
@@ -6624,7 +6808,9 @@ Craft.FieldLayoutDesigner = Garnish.Base.extend(
 		snapToGrid: 30
 	},
 	defaults: {
-		customizableTabs: true
+		customizableTabs: true,
+		fieldInputName: 'fieldLayout[__TAB_NAME__][]',
+		requiredFieldInputName: 'requiredFields[]'
 	}
 });
 
@@ -6948,8 +7134,10 @@ Craft.FieldLayoutDesigner.TabDrag = Craft.FieldLayoutDesigner.BaseDrag.extend(
 
 			for (var i = 0; i < $fields.length; i++)
 			{
-				var $field = $($fields[i]);
-				$field.append('<input class="id-input" type="hidden" name="fieldLayout['+Craft.encodeUriComponent(tabName)+'][]" value="'+$field.data('id')+'">');
+				var $field = $($fields[i]),
+					inputName = this.designer.getFieldInputName(tabName);
+
+				$field.append('<input class="id-input" type="hidden" name="'+inputName+'" value="'+$field.data('id')+'">');
 			}
 
 			this.designer.fieldDrag.addItems($fields);
@@ -7046,7 +7234,7 @@ Craft.FieldLayoutDesigner.FieldDrag = Craft.FieldLayoutDesigner.BaseDrag.extend(
 		{
 			// Find the field's new tab name
 			var tabName = this.$insertion.parent().parent().find('.tab span').text(),
-				inputName = 'fieldLayout['+Craft.encodeUriComponent(tabName)+'][]';
+				inputName = this.designer.getFieldInputName(tabName);
 
 			if (this.draggingUnusedItem)
 			{

@@ -52,7 +52,7 @@ gulp.task('scss-lint', function() {
       'config': '.scss-lint.yml'
     }))
     .pipe(scsslint.reporter(scssLintReporter));
-}); 
+});
 
 
 gulp.task('styles', function(){
